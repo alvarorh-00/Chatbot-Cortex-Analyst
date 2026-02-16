@@ -14,9 +14,9 @@ Cortex Analyst es un servicio totalmente gestionado de Snowflake diseñado para 
 * **Integración Flexible:** Disponible vía REST API, facilitando su integración en Streamlit, Slack, Teams o cualquier aplicación personalizada.
 
 <div align="center">
-    <img src="img/arquitectura.png" alt="Arquitectura" width="800">  
+    <img src="doc/img/Arquitectura.png" alt="Arquitectura" width="800">  
     <br>
-  <em>Flujo de comunicación entre la App de Streamlit y Snowflake Cortex.</em>
+  <em>Flujo de comunicación entre la App de Streamlit y Snowflake Cortex Analyst.</em>
 </div>
 
 ### Seguridad y Gobernanza (Privacy-First)
@@ -33,7 +33,7 @@ La IA de Cortex opera bajo los estándares de seguridad más estrictos de Snowfl
 El éxito de Cortex Analyst reside en el **Modelo Semántico**. Es el componente que traduce el lenguaje humano a la estructura técnica de la base de datos. Se puede configurar mediante archivos YAML o **Semantic Views**.
 
  <div align="center">
-  <img src="img/image.png" alt="Semantic View" width="800">  
+  <img src="doc/img/image.png" alt="Semantic View" width="800">  
     <br>
   <em>Ejemplo de configuración de Semantic View.</em>
 </div>
