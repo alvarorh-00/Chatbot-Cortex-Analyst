@@ -108,7 +108,7 @@ def show_header_and_sidebar():
             with st.form("login_form"):
                 user_val = st.text_input("Usuario de Snowflake")
                 pass_val = st.text_input("Contraseña", type="password")
-                submit = st.form_submit_button("Entrar", use_container_width=True)
+                submit = st.form_submit_button("Entrar", width='stretch')
                 
                 if submit:
                     if user_val and pass_val:
@@ -146,7 +146,7 @@ def show_header_and_sidebar():
             )
         
         st.divider()
-        if st.button("Clear Chat History", use_container_width=True):
+        if st.button("Clear Chat History", width='stretch'):
             reset_session_state()
             st.rerun()
 
@@ -258,7 +258,16 @@ def display_sql_query(sql: str, message_index: int, confidence: dict, request_id
             else:
                 tab1, tab2 = st.tabs(["Data 📄", "Chart 📉"])
                 with tab1:
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(df, width='stretch')
+                    
+                    # --- BOTÓN DE DESCARGA ---
+                    csv = df.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Descargar datos como CSV",
+                        data=csv,
+                        file_name=f"analyst_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime='text/csv',
+                    )
                 with tab2:
                     display_charts_tab(df, message_index)
         else:
@@ -316,13 +325,22 @@ def display_warnings():
 
 def display_charts_tab(df: pd.DataFrame, message_index: int):
     if len(df.columns) >= 2:
+        # Intentamos detectar si alguna columna es de tipo fecha
         cols = list(df.columns)
-        x = st.selectbox("X axis", cols, key=f"x_{message_index}")
-        y = st.selectbox("Y axis", [c for c in cols if c != x], key=f"y_{message_index}")
-        if st.selectbox("Type", ["Bar", "Line"], key=f"t_{message_index}") == "Bar":
-            st.bar_chart(df.set_index(x)[y])
-        else:
+        date_cols = [c for c in cols if "DATE" in c.upper() or "TIME" in c.upper()]
+        
+        # Si hay fechas, las ponemos por defecto en el eje X
+        default_x = date_cols[0] if date_cols else cols[0]
+        
+        x = st.selectbox("Eje X", cols, index=cols.index(default_x), key=f"x_{message_index}")
+        y = st.selectbox("Eje Y", [c for c in cols if c != x], key=f"y_{message_index}")
+        
+        chart_type = st.selectbox("Tipo de gráfico", ["Lineas", "Barras"], key=f"t_{message_index}")
+        
+        if chart_type == "Lineas":
             st.line_chart(df.set_index(x)[y])
+        else:
+            st.bar_chart(df.set_index(x)[y])
 
 def display_feedback_section(request_id: str):
     # Lógica de feedback simplificada para el ejemplo
