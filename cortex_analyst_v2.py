@@ -16,52 +16,76 @@ from snowflake.snowpark.exceptions import SnowparkSQLException
 
 # --- CONFIGURACIÓN DE CONEXIÓN .streamlit/secrets.toml
 # --- 1. CONEXIÓN ---
-def get_snowflake_session():
-    if "snowpark_session" not in st.session_state:
-        try:
-            # Intentamos conectar usando los secretos
-            st.session_state.snowpark_session = Session.builder.configs(st.secrets["snowflake"]).create()
-        except Exception as e:
-            st.error(f"Error de conexión a Snowflake: {e}")
-            st.stop()
-    return st.session_state.snowpark_session
-
-session = get_snowflake_session()
+# def get_snowflake_session():
+#     if "snowpark_session" not in st.session_state:
+#         try:
+#             # Intentamos conectar usando los secretos
+#             st.session_state.snowpark_session = Session.builder.configs(st.secrets["snowflake"]).create()
+#         except Exception as e:
+#             st.error(f"Error de conexión a Snowflake: {e}")
+#             st.stop()
+#     return st.session_state.snowpark_session
 
 
+def get_snowflake_session(user, password):
+    """Crea la sesión usando credenciales del usuario + valores estáticos del secreto."""
+    try:
+        connection_parameters = {
+            "account": st.secrets["snowflake"]["account"],
+            "warehouse": st.secrets["snowflake"]["warehouse"],
+            "user": user,
+            "password": password,
+            # El rol es opcional; si no se pone, Snowflake usa el predeterminado del usuario
+            "role": st.secrets["snowflake"].get("role") 
+        }
+        return Session.builder.configs(connection_parameters).create()
+    except Exception as e:
+        st.sidebar.error("Usuario o contraseña incorrectos.")
+        return None
 
-# --- CONFIGURACIÓN API ---
-HOST = session.get_current_account().replace('"', '').lower() #URL de la cuenta para construir endpoint
-BASE_URL = f"https://{HOST}.snowflakecomputing.com"
-API_ENDPOINT = f"{BASE_URL}/api/v2/cortex/analyst/message"
-API_TIMEOUT = 60 #segundos 
+# session = get_snowflake_session()
 
+
+
+# # --- CONFIGURACIÓN API ---
+# HOST = session.get_current_account().replace('"', '').lower() #URL de la cuenta para construir endpoint
+# BASE_URL = f"https://{HOST}.snowflakecomputing.com"
+# API_ENDPOINT = f"{BASE_URL}/api/v2/cortex/analyst/message"
+# API_TIMEOUT = 60 #segundos 
 
 def get_available_semantic_views():
-    """Busca las Semantic Views disponibles y limpia los nombres de columnas."""
+    # Buscamos la sesión que guardamos en el login
+    if "snowpark_session" not in st.session_state:
+        return []
+    
+    # Usamos la sesión del estado de Streamlit
+    session_local = st.session_state.snowpark_session
     
     try:
-        #current_role = session.sql("SELECT CURRENT_ROLE()").collect()[0][0]
-        df = session.sql("SHOW SEMANTIC VIEWS IN ACCOUNT").to_pandas()
+        df = session_local.sql("SHOW SEMANTIC VIEWS IN ACCOUNT").to_pandas()
         if df.empty:
             return []
         
-        # Limpieza de comillas en los nombres de columnas de Snowflake
         df.columns = [col.strip().replace('"', '').upper() for col in df.columns]
-        
         if all(col in df.columns for col in ['DATABASE_NAME', 'SCHEMA_NAME', 'NAME']):
             return (df['DATABASE_NAME'] + "." + df['SCHEMA_NAME'] + "." + df['NAME']).tolist()
+
         return []
     except Exception as e:
         return []
-
 def main():
+    st.set_page_config(page_title="Cortex Analyst", layout="wide")
+    st.title("Cortex Analyst")
+    st.markdown("Interactúa con tus datos usando lenguaje natural a través de Semantic Views.")
+
+    show_header_and_sidebar()
+    
+
+    # --- 4. CHAT ---
     if "messages" not in st.session_state:
         reset_session_state()
     
-    show_header_and_sidebar()
-    
-    # Pregunta inicial automática si el chat está vacío
+    # Si el chat está vacío, lanzamos la pregunta inicial
     if len(st.session_state.messages) == 0:
         process_user_input("What questions can I ask?")
         
@@ -77,21 +101,48 @@ def reset_session_state():
     st.session_state.form_submitted = {}
 
 def show_header_and_sidebar():
-    st.title("Cortex Analyst")
-    st.markdown("Interactúa con tus datos usando lenguaje natural a través de Semantic Views.")
-
-    available_views = get_available_semantic_views()
-
     with st.sidebar:
+        st.title("🔐 Acceso")
+        
+        if "snowpark_session" not in st.session_state:
+            with st.form("login_form"):
+                user_val = st.text_input("Usuario de Snowflake")
+                pass_val = st.text_input("Contraseña", type="password")
+                submit = st.form_submit_button("Entrar", use_container_width=True)
+                
+                if submit:
+                    if user_val and pass_val:
+                        session_obj = get_snowflake_session(user_val, pass_val)
+                        if session_obj:
+                            st.session_state.snowpark_session = session_obj
+                            st.rerun()
+                    else:
+                        st.warning("Por favor, completa ambos campos.")
+            st.stop() 
+        
+        # --- CÓDIGO SI YA ESTÁ LOGUEADO ---
+        session = st.session_state.snowpark_session
+        st.write(f"👤 **Usuario:** {session.get_current_user()}")
+        st.write(f"🏗️ **Warehouse:** {session.get_current_warehouse()}")
+        st.write(f"**Role:** {session.get_current_role()}")
+        
+        if st.button("Cerrar Sesión", type="primary"):
+            session.close()
+            del st.session_state.snowpark_session
+            st.session_state.messages = [] 
+            st.rerun()
+
+        # --- 3. CARGA DE MODELOS SEMÁNTICOS ---
+        available_views = get_available_semantic_views()
+
         if not available_views:
-            st.error("No se encontraron Semantic Views. Revisa tus permisos SELECT.")
-            st.session_state.selected_semantic_model_path = None
+            st.warning("⚠️ No tienes acceso a ningún modelo semántico con tu rol actual.")
         else:
             st.selectbox(
-                "Selecciona el modelo semántico:",
+                "Selecciona el área de datos:",
                 available_views,
                 key="selected_semantic_model_path",
-                on_change=reset_session_state,
+                on_change=reset_session_state # Importante para limpiar el chat al cambiar de modelo
             )
         
         st.divider()
@@ -100,16 +151,28 @@ def show_header_and_sidebar():
             st.rerun()
 
 def get_analyst_response(messages: List[Dict]) -> Tuple[Dict, Optional[str]]:
-    """Envía la petición a la API usando la clave 'semantic_view'."""
+    """Calcula el endpoint y envía la petición usando la sesión activa."""
+    
+    # 1. Recuperamos la sesión del estado de Streamlit
+    if "snowpark_session" not in st.session_state:
+        return {}, "No hay una sesión activa de Snowflake."
+    
+    session = st.session_state.snowpark_session
     model_path = st.session_state.selected_semantic_model_path
     
-    # CLAVE CORRECTA PARA SEMANTIC VIEWS
+    # 2. CONFIGURACIÓN DINÁMICA DEL ENDPOINT
+    # Lo calculamos aquí dentro porque aquí ya sabemos que 'session' existe
+    host = session.get_current_account().replace('"', '').lower()
+    base_url = f"https://{host}.snowflakecomputing.com"
+    api_endpoint = f"{base_url}/api/v2/cortex/analyst/message"
+    
+    # 3. PREPARACIÓN DE LA PETICIÓN
     request_body = {
         "messages": messages,
         "semantic_view": model_path 
     }
 
-    # Extraemos el token de la sesión actual de Snowpark
+    # El token se extrae de la conexión actual
     token = session._conn._conn.rest.token
 
     headers = {
@@ -119,23 +182,21 @@ def get_analyst_response(messages: List[Dict]) -> Tuple[Dict, Optional[str]]:
     }
 
     try:
-        # Usamos requests.post en lugar de _snowflake
         response = requests.post(
-            API_ENDPOINT, 
+            api_endpoint, 
             headers=headers, 
             json=request_body, 
-            timeout=API_TIMEOUT
+            timeout=60 # Timeout de 1 minuto
         )
         
         parsed_content = response.json()
         if response.status_code == 200:
             return parsed_content, None
         else:
-            error_msg = f"Error {response.status_code}: {parsed_content.get('message', 'Unknown error')}"
+            error_msg = f"Error {response.status_code}: {parsed_content.get('message', 'Error desconocido')}"
             return parsed_content, error_msg
     except Exception as e:
         return {}, f"Error de red: {str(e)}"
-
 
 # --- PROCESAMIENTO Y VISUALIZACIÓN ---
 
@@ -208,10 +269,17 @@ def display_sql_query(sql: str, message_index: int, confidence: dict, request_id
 
 # --- FUNCIONES AUXILIARES (Tablas, Feedback, etc.) ---
 
-@st.cache_data(show_spinner=False)
+#@st.cache_data(show_spinner=False)
 def get_query_exec_result(query: str):
+    # 1. Recuperamos la sesión del estado de Streamlit
+    if "snowpark_session" not in st.session_state:
+        return None, "No hay sesión activa."
+    
+    session_ejecucion = st.session_state.snowpark_session
+    
     try:
-        return session.sql(query).to_pandas(), None
+        # 2. Ejecutamos la consulta
+        return session_ejecucion.sql(query).to_pandas(), None
     except Exception as e:
         return None, str(e)
 
