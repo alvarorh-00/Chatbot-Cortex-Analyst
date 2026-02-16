@@ -36,7 +36,7 @@ def get_snowflake_session(user, password):
             "user": user,
             "password": password,
             # El rol es opcional; si no se pone, Snowflake usa el predeterminado del usuario
-            "role": st.secrets["snowflake"].get("role") 
+            #"role": st.secrets["snowflake"].get("role") 
         }
         return Session.builder.configs(connection_parameters).create()
     except Exception as e:
@@ -124,7 +124,7 @@ def show_header_and_sidebar():
         session = st.session_state.snowpark_session
         st.write(f"👤 **Usuario:** {session.get_current_user()}")
         st.write(f"🏗️ **Warehouse:** {session.get_current_warehouse()}")
-        st.write(f"**Role:** {session.get_current_role()}")
+        #st.write(f"**Role:** {session.get_current_role()}")
         
         if st.button("Cerrar Sesión", type="primary"):
             session.close()
