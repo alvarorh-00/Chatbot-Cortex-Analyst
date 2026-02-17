@@ -34,7 +34,7 @@ def get_snowflake_session(user, password):
             "account": st.secrets["snowflake"]["account"],
             "warehouse": st.secrets["snowflake"]["warehouse"],
             "user": user,
-            "password": password,
+            "password": password
             # El rol es opcional; si no se pone, Snowflake usa el predeterminado del usuario
             #"role": st.secrets["snowflake"].get("role") 
         }
@@ -108,7 +108,7 @@ def show_header_and_sidebar():
             with st.form("login_form"):
                 user_val = st.text_input("Usuario de Snowflake")
                 pass_val = st.text_input("Contraseña", type="password")
-                submit = st.form_submit_button("Entrar", width='stretch')
+                submit = st.form_submit_button("Entrar", use_container_width=True)
                 
                 if submit:
                     if user_val and pass_val:
@@ -146,7 +146,7 @@ def show_header_and_sidebar():
             )
         
         st.divider()
-        if st.button("Clear Chat History", width='stretch'):
+        if st.button("Clear Chat History", use_container_width=True):
             reset_session_state()
             st.rerun()
 
@@ -258,7 +258,7 @@ def display_sql_query(sql: str, message_index: int, confidence: dict, request_id
             else:
                 tab1, tab2 = st.tabs(["Data 📄", "Chart 📉"])
                 with tab1:
-                    st.dataframe(df, width='stretch')
+                    st.dataframe(df, use_container_width=True)
                     
                     # --- BOTÓN DE DESCARGA ---
                     csv = df.to_csv(index=False).encode('utf-8')
