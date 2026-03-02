@@ -1,10 +1,103 @@
-# 🚀 Snowflake Cortex Analyst & Semantic Views Explorer
+# 🚀 Sistema de Resolución de Incidencias de Pedidos
 
-Esta aplicación de **Streamlit** actúa como una interfaz inteligente y segura para interactuar con **Snowflake Cortex Analyst**. Permite a los usuarios de negocio obtener respuestas precisas de sus datos utilizando lenguaje natural, aprovechando la potencia de las **Semantic Views**.
+Esta aplicación de **Streamlit** actúa como un sistema inteligente para la **resolución de incidencias de pedidos**, combinando:
+- **Formulario estructurado** para captura de datos de incidencia
+- **Vistas analíticas de Snowflake** para diagnóstico automatizado
+- **Análisis con IA (Cortex)** para interpretación en lenguaje natural
+- **Interfaz conversacional** para seguimiento y resolución
+
+---
+
+## 🎯 Flujo de Trabajo
+
+### 1. **Captura de Incidencia**
+Usuario completa formulario con información específica:
+- **UNECO**
+- **Pedido Host**
+- **Almacén / Centro Logístico**
+- **Referencia**
+- **Fechas (FEO, FIS)**
+- **Estado Prepack**
+- **Descripción del problema**
+
+### 2. **Análisis Automatizado**
+El sistema ejecuta vistas de Snowflake en paralelo:
+
+#### **Vista Paso 1: Tipo de Pedido**
+```sql
+SELECT * FROM V_DIAGNOSTICO_PASO1_TIPO_PEDIDO 
+WHERE CO_UNECO = '{uneco}' 
+  AND CO_CENTRO_LOGISTICO = '{almacen}'
+  AND CO_PEDIDO_HOST = '{pedido_host}'
+```
+
+#### **Vista Paso 2: Estado ASN**
+```sql
+SELECT * FROM V_DIAGNOSTICO_PASO2_ESTADO_ASN 
+WHERE CO_PEDIDO = '{pedido_host}'
+```
+
+### 3. **Análisis con IA (Snowflake Cortex)**
+La IA analiza los resultados y genera:
+- 📊 **Interpretación del tipo de pedido**
+- 📦 **Análisis del estado del ASN**
+- ⚠️ **Identificación de diferencias/problemas**
+- ✅ **Recomendaciones concretas de resolución**
+
+### 4. **Presentación de Resultados**
+- **Análisis en lenguaje natural** (generado por IA)
+- **Tablas de datos detalladas** (con descarga CSV)
+- **Conversación interactiva** para seguimiento
+
+---
+
+## 🤖 Análisis con IA (Snowflake Cortex)
+
+El sistema usa **Snowflake Cortex COMPLETE** para analizar los datos de las vistas y generar respuestas en lenguaje natural.
+
+### Modelos Disponibles:
+- `mistral-large` (recomendado, por defecto)
+- `mixtral-8x7b`
+- `snowflake-arctic`
+- `llama3-70b`
+- `llama3-8b`
+- `mistral-7b`
+- `gemma-7b`
+
+El modelo se selecciona desde el **sidebar** de la aplicación.
+
+### Estructura del Análisis:
+1. **Contexto**: Datos de la incidencia + resultados de las vistas
+2. **Prompt**: Instrucciones para interpretar y analizar
+3. **Respuesta IA**: Análisis estructurado con:
+   - Tipo de pedido identificado
+   - Estado del ASN
+   - Problemas detectados
+   - Recomendaciones de resolución
+   - Alertas críticas
+
+---
+
+## 🏗️ Arquitectura del Sistema
+
+```
+Usuario
+  ↓
+[Formulario Incidencia]
+  ↓
+[Vistas Snowflake] → Diagnóstico Paso 1 (Tipo Pedido)
+                   → Diagnóstico Paso 2 (Estado ASN)
+  ↓
+[Snowflake Cortex] → Análisis con IA
+  ↓
+[UI Streamlit] → Respuesta en lenguaje natural + Tablas de datos
+```
 
 ---
 
 ## 🧠 1. ¿Qué es Cortex Analyst?
+
+**Nota histórica:** Este sistema originalmente usaba Cortex Analyst API con Semantic Views. La arquitectura actual usa **consultas directas a vistas + Cortex COMPLETE** para mayor control y flexibilidad.
 
 Cortex Analyst es un servicio totalmente gestionado de Snowflake diseñado para la **Analítica Self-Serve**. Proporciona una experiencia de analítica conversacional sobre datos estructurados con una precisión de grado empresarial.
 
