@@ -4,7 +4,6 @@ Sistema de Resolución de Incidencias de Pedidos
 Captura incidencias mediante formulario y usa Cortex Analyst
 para ejecutar SPs según árbol de decisión configurado en Semantic View.
 """
-
 import streamlit as st
 from core import (
     show_header_and_sidebar,
@@ -50,7 +49,7 @@ def main():
             display_incidencia_summary(st.session_state.incidencia_data)
         
         st.markdown("---")
-        st.markdown("### 💬 Resolución de Incidencia con Foundry")
+        st.markdown("### 💬 Resolución de Incidencia con Cortex Analyst")
         
         # Si el chat está vacío, iniciamos con el contexto de la incidencia
         if len(st.session_state.messages) == 0:
