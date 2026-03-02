@@ -38,6 +38,8 @@ headless = true\n\
 # Exponer el puerto de Streamlit
 EXPOSE 8501
 
+# Healthcheck
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
 # Ejecutar la aplicación
 CMD ["streamlit", "run", "app.py"]

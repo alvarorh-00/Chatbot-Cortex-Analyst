@@ -2,17 +2,19 @@
 Módulo de autenticación y sesión de Snowflake
 """
 
+import os
 import streamlit as st
 from snowflake.snowpark import Session
-from .utils import reset_session_state
+from .utils import reset_session_state, get_config
 
 
 def get_snowflake_session(user: str, password: str):
-    """Crea la sesión usando credenciales del usuario + valores estáticos del secreto."""
+    """Crea la sesión usando credenciales del usuario + valores estáticos del entorno."""
     try:
+        config = get_config()
         connection_parameters = {
-            "account": st.secrets["snowflake"]["account"],
-            "warehouse": st.secrets["snowflake"]["warehouse"],
+            "account": config["snowflake_account"],
+            "warehouse": config["snowflake_warehouse"],
             "user": user,
             "password": password
         }

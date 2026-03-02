@@ -3,3 +3,4 @@ Requests==2.32.3
 snowflake-snowpark-python
 snowflake_connector_python==3.14.0
 streamlit==1.43.2
+tomli>=2.0.0;python_version<"3.11"
